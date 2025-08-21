@@ -13,7 +13,7 @@ env:
 jobs:
   build-android:
     name: Build Android
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     
     steps:
     - name: Checkout code
@@ -27,25 +27,25 @@ jobs:
     - name: Install MAUI workloads
       run: |
         dotnet nuget locals all --clear
-        dotnet workload install maui android
+        dotnet workload install maui
         
     - name: Restore dependencies
       run: dotnet restore ${{ env.PROJECT_PATH }}
       
     - name: Build Android Debug APK
       run: |
-        dotnet publish ${{ env.PROJECT_PATH }} \
-          -c Debug \
-          -f net9.0-android \
-          --no-restore \
+        dotnet publish ${{ env.PROJECT_PATH }} `
+          -c Debug `
+          -f net9.0-android `
+          --no-restore `
           -o ./artifacts/android-debug
           
     - name: Build Android Release APK
       run: |
-        dotnet publish ${{ env.PROJECT_PATH }} \
-          -c Release \
-          -f net9.0-android \
-          --no-restore \
+        dotnet publish ${{ env.PROJECT_PATH }} `
+          -c Release `
+          -f net9.0-android `
+          --no-restore `
           -o ./artifacts/android-release
           
     - name: Upload Android Debug APK
@@ -227,7 +227,7 @@ jobs:
   # Optional: Build on feature branches (no release)
   build-feature:
     name: Build Feature Branch
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     if: github.ref != 'refs/heads/main' && github.event_name == 'push'
     
     steps:
@@ -242,14 +242,14 @@ jobs:
     - name: Install MAUI workloads
       run: |
         dotnet nuget locals all --clear
-        dotnet workload install maui android
+        dotnet workload install maui
         
     - name: Restore dependencies
       run: dotnet restore ${{ env.PROJECT_PATH }}
       
     - name: Build Android (verification only)
       run: |
-        dotnet build ${{ env.PROJECT_PATH }} \
-          -c Debug \
-          -f net9.0-android \
+        dotnet build ${{ env.PROJECT_PATH }} `
+          -c Debug `
+          -f net9.0-android `
           --no-restore
