@@ -36,11 +36,11 @@ Write-Host "Output file: $outFile"
         "`n--- $($_.FullName) ---"
         Get-Content $_.FullName
     }
-    # "`n=== CS FILES ==="
-    # Get-ChildItem -Recurse -Filter *.cs | ForEach-Object {
-    #     "`n--- $($_.FullName) ---"
-    #     Get-Content $_.FullName
-    # }
+    "`n=== CS FILES ==="
+    Get-ChildItem -Recurse -Filter *.cs | ForEach-Object {
+        "`n--- $($_.FullName) ---"
+        Get-Content $_.FullName
+    }
     "`n=== feature FILES ==="
     Get-ChildItem -Recurse -Filter *.feature | ForEach-Object {
         "`n--- $($_.FullName) ---"
