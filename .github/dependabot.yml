@@ -1,5 +1,5 @@
 # ==============================================================================
-# FILE: .github/dependabot.yml (Updated location and format)
+# FILE: .github/dependabot.yml
 # ==============================================================================
 version: 2
 updates:

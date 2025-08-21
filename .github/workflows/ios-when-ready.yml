@@ -1,0 +1,101 @@
+
+# ==============================================================================
+# FILE: .github/workflows/ios-when-ready.yml (Future use)
+# ==============================================================================
+---
+name: iOS Build (Enable When Xcode 16.4+ Available)
+
+on:
+  workflow_dispatch:
+  # Uncomment when GitHub runners are updated
+  # push:
+  #   branches: [ main ]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH: 'src/Breakout.csproj'
+
+jobs:
+  check-xcode-version:
+    name: Check Xcode Version
+    runs-on: macos-latest
+    outputs:
+      xcode-compatible: ${{ steps.check.outputs.compatible }}
+    
+    steps:
+    - name: Check Xcode compatibility
+      id: check
+      run: |
+        XCODE_VERSION=$(xcodebuild -version | grep "Xcode" | cut -d" " -f2)
+        echo "Current Xcode version: $XCODE_VERSION"
+        
+        # Check if version is 16.4 or higher
+        if [ "$(printf '%s\n' "16.4" "$XCODE_VERSION" | sort -V | head -n1)" = "16.4" ]; then
+          echo "✅ Xcode $XCODE_VERSION is compatible with .NET 9"
+          echo "compatible=true" >> $GITHUB_OUTPUT
+        else
+          echo "⚠️ Xcode $XCODE_VERSION is not compatible with .NET 9 (requires 16.4+)"
+          echo "compatible=false" >> $GITHUB_OUTPUT
+        fi
+
+  build-ios:
+    name: Build iOS
+    runs-on: macos-latest
+    needs: check-xcode-version
+    if: needs.check-xcode-version.outputs.xcode-compatible == 'true'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install MAUI workloads
+      run: |
+        dotnet nuget locals all --clear
+        dotnet workload install maui
+        dotnet workload install ios
+        
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+      
+    - name: Build iOS (Debug)
+      run: |
+        dotnet build ${{ env.PROJECT_PATH }} \
+          -c Debug \
+          -f net9.0-ios \
+          --no-restore
+
+  build-maccatalyst:
+    name: Build MacCatalyst
+    runs-on: macos-latest
+    needs: check-xcode-version
+    if: needs.check-xcode-version.outputs.xcode-compatible == 'true'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install MAUI workloads
+      run: |
+        dotnet nuget locals all --clear
+        dotnet workload install maui
+        dotnet workload install maccatalyst
+        
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+      
+    - name: Build MacCatalyst (Debug)
+      run: |
+        dotnet build ${{ env.PROJECT_PATH }} \
+          -c Debug \
+          -f net9.0-maccatalyst \
+          --no-restore

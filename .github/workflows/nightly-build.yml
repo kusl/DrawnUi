@@ -1,5 +1,5 @@
 # ==============================================================================
-# FILE: .github/workflows/nightly-build.yml
+# FILE: .github/workflows/nightly-build.yml  
 # ==============================================================================
 ---
 name: Nightly Build
@@ -23,12 +23,13 @@ jobs:
           - os: windows-latest
             framework: net9.0-android
             workloads: "maui android"
-          - os: macos-latest
-            framework: net9.0-ios
-            workloads: "maui ios"
-          - os: macos-latest
-            framework: net9.0-maccatalyst
-            workloads: "maui maccatalyst"
+          # iOS and MacCatalyst temporarily disabled due to Xcode requirements
+          # - os: macos-latest
+          #   framework: net9.0-ios
+          #   workloads: "maui ios"
+          # - os: macos-latest
+          #   framework: net9.0-maccatalyst
+          #   workloads: "maui maccatalyst"
           - os: windows-latest
             framework: net9.0-windows10.0.19041.0
             workloads: "maui"
@@ -86,3 +87,26 @@ jobs:
           **/*.binlog
           **/*.log
         retention-days: 7
+
+  check-xcode-status:
+    name: Check Xcode Version Status
+    runs-on: macos-latest
+    
+    steps:
+    - name: Check Xcode Version
+      run: |
+        echo "=== Current Xcode Version ===" 
+        xcode-select -p
+        xcrun --show-sdk-version --sdk iphoneos
+        
+        echo "=== .NET 9 Requirement ==="
+        echo ".NET 9 for iOS requires Xcode 16.4"
+        echo "Current runner has: $(xcrun --show-sdk-version --sdk iphoneos)"
+        
+        # Check if we can enable iOS builds again
+        CURRENT_VERSION=$(xcrun --show-sdk-version --sdk iphoneos | cut -d. -f1)
+        if [ "$CURRENT_VERSION" -ge "17" ]; then
+          echo "✅ iOS builds can potentially be re-enabled!"
+        else
+          echo "⚠️ iOS builds still need to remain disabled"
+        fi
