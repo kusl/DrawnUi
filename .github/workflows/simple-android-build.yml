@@ -1,0 +1,135 @@
+name: Android Build (Simplified)
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH: 'src/Breakout.csproj'
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'microsoft'
+        java-version: '17'
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install MAUI workloads
+      run: |
+        dotnet nuget locals all --clear
+        dotnet workload install maui
+        
+    - name: Restore dependencies (Android only)
+      run: dotnet restore ${{ env.PROJECT_PATH }} -f net9.0-android
+      
+    - name: Build Android Debug APK
+      run: |
+        dotnet build ${{ env.PROJECT_PATH }} `
+          -c Debug `
+          -f net9.0-android `
+          --no-restore `
+          --verbosity normal
+          
+    - name: Build Android Release APK
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} `
+          -c Release `
+          -f net9.0-android `
+          --no-restore `
+          -o ./artifacts/android-release `
+          --verbosity normal
+          
+    - name: List APK files
+      run: |
+        Write-Host "Looking for APK files..."
+        Get-ChildItem -Path "artifacts" -Recurse -Include "*.apk" | ForEach-Object {
+          Write-Host "Found APK: $($_.FullName) ($(($_.Length/1MB).ToString('F2')) MB)"
+        }
+        
+    - name: Upload Android Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-release-apk-${{ github.run_number }}
+        path: ./artifacts/android-release/**/*.apk
+        retention-days: 30
+        
+    - name: Find and display APK info
+      run: |
+        $apkFiles = Get-ChildItem -Path "artifacts" -Recurse -Include "*.apk"
+        if ($apkFiles.Count -gt 0) {
+          Write-Host "✅ APK build successful!" -ForegroundColor Green
+          $apkFiles | ForEach-Object {
+            Write-Host "📱 APK: $($_.Name) - $(($_.Length/1MB).ToString('F2')) MB" -ForegroundColor Cyan
+          }
+        } else {
+          Write-Host "❌ No APK files found" -ForegroundColor Red
+          Write-Host "Checking build output directory structure..."
+          Get-ChildItem -Path "artifacts" -Recurse | ForEach-Object {
+            Write-Host "  $($_.FullName)"
+          }
+        }
+
+  create-release:
+    name: Create Release
+    needs: [build-android]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Download APK artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: android-release-apk-${{ github.run_number }}
+        path: ./apk-files
+        
+    - name: Create version tag
+      id: create_tag
+      run: |
+        VERSION="v$(date +'%Y.%m.%d')-$(echo ${{ github.sha }} | cut -c1-7)"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Generated version: $VERSION"
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.create_tag.outputs.version }}
+        name: Breakout Game ${{ steps.create_tag.outputs.version }}
+        body: |
+          ## 🎮 Breakout Game - Android Release
+          
+          **Built from commit:** ${{ github.sha }}
+          
+          ### Downloads
+          - **Android APK**: Ready for installation on Android devices
+          
+          ### Installation
+          1. Download the APK file
+          2. Enable "Install from unknown sources" in Android settings
+          3. Install the APK file
+          
+          ### Changes
+          - Automated build from main branch
+          - Built with .NET 9 and MAUI
+          
+        files: ./apk-files/**/*.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

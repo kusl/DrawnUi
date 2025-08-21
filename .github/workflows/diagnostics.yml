@@ -1,0 +1,147 @@
+name: Diagnostics
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose-dotnet:
+    name: Diagnose .NET Environment
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Diagnose .NET installation
+      run: |
+        Write-Host "=== .NET Information ===" -ForegroundColor Cyan
+        dotnet --info
+        
+        Write-Host "`n=== Available Runtimes ===" -ForegroundColor Cyan
+        dotnet --list-runtimes
+        
+        Write-Host "`n=== Available SDKs ===" -ForegroundColor Cyan
+        dotnet --list-sdks
+        
+        Write-Host "`n=== NuGet Sources ===" -ForegroundColor Cyan
+        dotnet nuget list source
+        
+    - name: Install MAUI workloads
+      run: |
+        Write-Host "=== Installing MAUI workloads ===" -ForegroundColor Cyan
+        dotnet nuget locals all --clear
+        dotnet workload install maui
+        
+        Write-Host "`n=== Installed Workloads ===" -ForegroundColor Cyan
+        dotnet workload list
+        
+    - name: Test project restore
+      run: |
+        Write-Host "=== Testing project restore ===" -ForegroundColor Cyan
+        
+        Write-Host "`nTrying restore without framework specification..." -ForegroundColor Yellow
+        try {
+          dotnet restore src/Breakout.csproj --verbosity normal
+          Write-Host "✅ General restore successful" -ForegroundColor Green
+        } catch {
+          Write-Host "❌ General restore failed: $_" -ForegroundColor Red
+        }
+        
+        Write-Host "`nTrying restore for Android framework only..." -ForegroundColor Yellow
+        try {
+          dotnet restore src/Breakout.csproj -f net9.0-android --verbosity normal
+          Write-Host "✅ Android restore successful" -ForegroundColor Green
+        } catch {
+          Write-Host "❌ Android restore failed: $_" -ForegroundColor Red
+        }
+        
+    - name: Test Android build
+      run: |
+        Write-Host "=== Testing Android build ===" -ForegroundColor Cyan
+        try {
+          dotnet build src/Breakout.csproj -c Debug -f net9.0-android --no-restore --verbosity normal
+          Write-Host "✅ Android build successful" -ForegroundColor Green
+        } catch {
+          Write-Host "❌ Android build failed: $_" -ForegroundColor Red
+        }
+        
+    - name: Check for common issues
+      run: |
+        Write-Host "=== Checking for common issues ===" -ForegroundColor Cyan
+        
+        Write-Host "`nChecking global.json..." -ForegroundColor Yellow
+        if (Test-Path "global.json") {
+          Write-Host "Found global.json:"
+          Get-Content "global.json"
+        } else {
+          Write-Host "No global.json found"
+        }
+        
+        Write-Host "`nChecking NuGet.config..." -ForegroundColor Yellow
+        if (Test-Path "NuGet.config") {
+          Write-Host "Found NuGet.config:"
+          Get-Content "NuGet.config"
+        } else {
+          Write-Host "No NuGet.config found"
+        }
+        
+        Write-Host "`nChecking for Breakout.targets..." -ForegroundColor Yellow
+        $targetsPath = "../../Breakout.targets"
+        if (Test-Path $targetsPath) {
+          Write-Host "Found Breakout.targets:"
+          Get-Content $targetsPath
+        } else {
+          Write-Host "No Breakout.targets found at $targetsPath"
+        }
+
+  diagnose-maui-android:
+    name: Diagnose MAUI Android Specifically
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'microsoft'
+        java-version: '17'
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: Check Java setup
+      run: |
+        Write-Host "=== Java Information ===" -ForegroundColor Cyan
+        java -version
+        Write-Host "JAVA_HOME: $env:JAVA_HOME"
+        
+    - name: Install only Android workloads
+      run: |
+        Write-Host "=== Installing Android workloads ===" -ForegroundColor Cyan
+        dotnet nuget locals all --clear
+        dotnet workload install android
+        dotnet workload install maui-android
+        
+        Write-Host "`n=== Verifying Android workloads ===" -ForegroundColor Cyan
+        dotnet workload list
+        
+    - name: Create minimal test project
+      run: |
+        Write-Host "=== Creating minimal test project ===" -ForegroundColor Cyan
+        dotnet new maui -n TestApp -o ./test-app
+        
+        Write-Host "`nTesting minimal project restore..." -ForegroundColor Yellow
+        cd test-app
+        dotnet restore -f net9.0-android --verbosity normal
+        
+        Write-Host "`nTesting minimal project build..." -ForegroundColor Yellow
+        dotnet build -c Debug -f net9.0-android --no-restore --verbosity normal
