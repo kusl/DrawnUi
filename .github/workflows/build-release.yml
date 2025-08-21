@@ -117,6 +117,9 @@ jobs:
           -f net9.0-windows10.0.19041.0 `
           --no-restore
           
+    - name: Restore dependencies for publish (with runtime)
+      run: dotnet restore ${{ env.PROJECT_PATH }} -r win-x64
+          
     - name: Build Windows (Release)
       run: |
         dotnet publish ${{ env.PROJECT_PATH }} `
