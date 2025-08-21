@@ -28,18 +28,18 @@ Write-Host "Output file: $outFile"
    
     "`n=== SLN FILE ==="
     Get-Content *.sln
-    # "`n=== GITHUB ACTIONS ==="
-    # Get-Content .github\workflows\*.yml
+    "`n=== GITHUB ACTIONS ==="
+    Get-Content .github\workflows\*.yml
     "`n=== CSPROJ FILES ==="
     Get-ChildItem -Recurse -Filter *.csproj | ForEach-Object {
         "`n--- $($_.FullName) ---"
         Get-Content $_.FullName
     }
-    "`n=== CS FILES ==="
-    Get-ChildItem -Recurse -Filter *.cs | ForEach-Object {
-        "`n--- $($_.FullName) ---"
-        Get-Content $_.FullName
-    }
+    # "`n=== CS FILES ==="
+    # Get-ChildItem -Recurse -Filter *.cs | ForEach-Object {
+    #     "`n--- $($_.FullName) ---"
+    #     Get-Content $_.FullName
+    # }
     "`n=== feature FILES ==="
     Get-ChildItem -Recurse -Filter *.feature | ForEach-Object {
         "`n--- $($_.FullName) ---"
