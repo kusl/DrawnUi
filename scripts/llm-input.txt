@@ -3,12 +3,13 @@ Path
 ----
 C:\code\DrawnUi
 On branch main
-Your branch is ahead of 'upstream/main' by 12 commits.
+Your branch is ahead of 'upstream/main' by 13 commits.
   (use "git push" to publish your local commits)
 
 Changes not staged for commit:
   (use "git add <file>..." to update what will be committed)
   (use "git restore <file>..." to discard changes in working directory)
+	modified:   scripts/cat.ps1
 	modified:   scripts/llm-input.txt
 
 no changes added to commit (use "git add" and/or "git commit -a")
@@ -25,6 +26,14 @@ no changes added to commit (use "git add" and/or "git commit -a")
     main merges with remote main
   Local ref configured for 'git push':
     main pushes to main (fast-forwardable)
+* remote origin
+  Fetch URL: git@github.com:kusl/DrawnUi.git
+  Push  URL: git@github.com:kusl/DrawnUi.git
+  HEAD branch: main
+  Remote branch:
+    main tracked
+  Local ref configured for 'git push':
+    main pushes to main (up to date)
 Folder PATH listing
 Volume serial number is BE05-6605
 C:.
