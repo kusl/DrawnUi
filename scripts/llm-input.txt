@@ -3,7 +3,7 @@ Path
 ----
 C:\code\DrawnUi
 On branch main
-Your branch is ahead of 'upstream/main' by 18 commits.
+Your branch is ahead of 'upstream/main' by 19 commits.
   (use "git push" to publish your local commits)
 
 Changes not staged for commit:
@@ -32,7 +32,7 @@ no changes added to commit (use "git add" and/or "git commit -a")
   Remote branch:
     main tracked
   Local ref configured for 'git push':
-    main pushes to main (fast-forwardable)
+    main pushes to main (up to date)
 Folder PATH listing
 Volume serial number is BE05-6605
 C:.
