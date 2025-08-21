@@ -1,0 +1,59 @@
+name: PR Validation
+
+on:
+  pull_request:
+    branches: [ main, dev ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH: 'src/Breakout.csproj'
+
+jobs:
+  validate:
+    name: Quick Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install MAUI workloads
+      run: |
+        dotnet nuget locals all --clear
+        dotnet workload install maui android
+        
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+      
+    - name: Build Android (Debug - Fast validation)
+      run: |
+        dotnet build ${{ env.PROJECT_PATH }} \
+          -c Debug \
+          -f net9.0-android \
+          --no-restore
+          
+    - name: Run static analysis
+      run: |
+        echo "Running basic project validation..."
+        
+        # Check for common issues
+        echo "Checking for TODO/FIXME comments..."
+        grep -r "TODO\|FIXME\|HACK" src/ || echo "No TODO/FIXME/HACK comments found"
+        
+        # Check project file integrity
+        echo "Validating project file..."
+        dotnet sln list
+        
+    - name: Generate build summary
+      run: |
+        echo "## PR Validation Summary 📋" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Project restores successfully" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Android build compiles without errors" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Dependencies are resolved" >> $GITHUB_STEP_SUMMARY
+        echo "- 📱 Ready for full CI/CD pipeline on merge" >> $GITHUB_STEP_SUMMARY
