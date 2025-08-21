@@ -1,7 +1,6 @@
 # ==============================================================================
-# FILE: .github/dependabot.yml (Bonus - Automated dependency updates)
+# FILE: .github/dependabot.yml (Updated location and format)
 # ==============================================================================
----
 version: 2
 updates:
   # Enable version updates for NuGet
@@ -11,10 +10,6 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
-    reviewers:
-      - "taublast"  # Replace with actual maintainer username
-    assignees:
-      - "taublast"  # Replace with actual maintainer username
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"

@@ -1,0 +1,29 @@
+# ==============================================================================
+# DEBUGGING: FILE: .github/workflows/debug-workloads.yml
+# ==============================================================================
+---
+name: Debug Workloads
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug-workloads:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+        
+    - name: List available workloads
+      run: |
+        Write-Host "=== Available Workloads ===" -ForegroundColor Cyan
+        dotnet workload search
+        
+        Write-Host "`n=== Currently Installed Workloads ===" -ForegroundColor Cyan
+        dotnet workload list
+        
+        Write-Host "`n=== .NET Info ===" -ForegroundColor Cyan
+        dotnet --info

@@ -1,5 +1,5 @@
 # ==============================================================================
-# OPTIONAL: FILE: .github/workflows/nightly-build.yml
+# FILE: .github/workflows/nightly-build.yml
 # ==============================================================================
 ---
 name: Nightly Build
@@ -22,16 +22,16 @@ jobs:
         include:
           - os: windows-latest
             framework: net9.0-android
-            workload: "maui android"
+            workloads: "maui android"
           - os: macos-latest
             framework: net9.0-ios
-            workload: "maui ios"
+            workloads: "maui ios"
           - os: macos-latest
             framework: net9.0-maccatalyst
-            workload: "maui maccatalyst"
+            workloads: "maui maccatalyst"
           - os: windows-latest
             framework: net9.0-windows10.0.19041.0
-            workload: "maui windows"
+            workloads: "maui"
     
     runs-on: ${{ matrix.os }}
     
@@ -55,7 +55,11 @@ jobs:
       shell: pwsh
       run: |
         dotnet nuget locals all --clear
-        dotnet workload install ${{ matrix.workload }}
+        $workloads = "${{ matrix.workloads }}".Split(' ')
+        foreach ($workload in $workloads) {
+          Write-Host "Installing workload: $workload"
+          dotnet workload install $workload
+        }
         
     - name: Restore dependencies
       run: dotnet restore ${{ env.PROJECT_PATH }}

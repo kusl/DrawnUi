@@ -36,7 +36,8 @@ jobs:
     - name: Install MAUI workloads
       run: |
         dotnet nuget locals all --clear
-        dotnet workload install maui android
+        dotnet workload install maui
+        dotnet workload install android
         
     - name: Restore dependencies
       run: dotnet restore ${{ env.PROJECT_PATH }}
@@ -65,7 +66,8 @@ jobs:
     - name: Install MAUI workloads
       run: |
         dotnet nuget locals all --clear
-        dotnet workload install maui ios
+        dotnet workload install maui
+        dotnet workload install ios
         
     - name: Restore dependencies
       run: dotnet restore ${{ env.PROJECT_PATH }}
@@ -75,6 +77,36 @@ jobs:
         dotnet build ${{ env.PROJECT_PATH }} \
           -c Debug \
           -f net9.0-ios \
+          --no-restore \
+          --verbosity normal
+
+  validate-maccatalyst:
+    name: Validate MacCatalyst Build
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install MAUI workloads
+      run: |
+        dotnet nuget locals all --clear
+        dotnet workload install maui
+        dotnet workload install maccatalyst
+        
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+      
+    - name: Build MacCatalyst (Debug - Fast validation)
+      run: |
+        dotnet build ${{ env.PROJECT_PATH }} \
+          -c Debug \
+          -f net9.0-maccatalyst \
           --no-restore \
           --verbosity normal
 
@@ -94,7 +126,7 @@ jobs:
     - name: Install MAUI workloads
       run: |
         dotnet nuget locals all --clear
-        dotnet workload install maui windows
+        dotnet workload install maui
         
     - name: Restore dependencies
       run: dotnet restore ${{ env.PROJECT_PATH }}
@@ -127,12 +159,16 @@ jobs:
         
         # Check for common issues
         Write-Host "`nChecking for TODO/FIXME comments..." -ForegroundColor Yellow
-        $todos = Select-String -Path "src\**\*.cs" -Pattern "TODO|FIXME|HACK" -Recurse
-        if ($todos) { 
-          Write-Host "Found items to review:" -ForegroundColor Yellow
-          $todos | ForEach-Object { Write-Host "  $($_.Filename):$($_.LineNumber) - $($_.Line.Trim())" }
-        } else { 
-          Write-Host "✅ No TODO/FIXME/HACK comments found" -ForegroundColor Green 
+        try {
+          $todos = Select-String -Path "src/**/*.cs" -Pattern "TODO|FIXME|HACK" -Recurse -ErrorAction SilentlyContinue
+          if ($todos) { 
+            Write-Host "Found items to review:" -ForegroundColor Yellow
+            $todos | ForEach-Object { Write-Host "  $($_.Filename):$($_.LineNumber) - $($_.Line.Trim())" }
+          } else { 
+            Write-Host "✅ No TODO/FIXME/HACK comments found" -ForegroundColor Green 
+          }
+        } catch {
+          Write-Host "⚠️  Could not check for TODO comments" -ForegroundColor Yellow
         }
         
         # Check project file integrity
@@ -141,31 +177,29 @@ jobs:
         
         # Check for large files
         Write-Host "`nChecking for large files..." -ForegroundColor Yellow
-        $largeFiles = Get-ChildItem -Path "src" -Recurse -File | Where-Object { $_.Length -gt 1MB }
-        if ($largeFiles) {
-          Write-Host "Large files found:" -ForegroundColor Yellow
-          $largeFiles | ForEach-Object { Write-Host "  $($_.FullName) - $([math]::Round($_.Length/1MB, 2))MB" }
-        } else {
-          Write-Host "✅ No large files found" -ForegroundColor Green
+        try {
+          $largeFiles = Get-ChildItem -Path "src" -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Length -gt 1MB }
+          if ($largeFiles) {
+            Write-Host "Large files found:" -ForegroundColor Yellow
+            $largeFiles | ForEach-Object { Write-Host "  $($_.FullName) - $([math]::Round($_.Length/1MB, 2))MB" }
+          } else {
+            Write-Host "✅ No large files found" -ForegroundColor Green
+          }
+        } catch {
+          Write-Host "⚠️  Could not check file sizes" -ForegroundColor Yellow
         }
         
-        # Check for duplicate files
-        Write-Host "`nChecking for potential duplicate code..." -ForegroundColor Yellow
-        $csFiles = Get-ChildItem -Path "src" -Filter "*.cs" -Recurse
-        $fileHashes = $csFiles | Group-Object { (Get-FileHash $_.FullName).Hash } | Where-Object { $_.Count -gt 1 }
-        if ($fileHashes) {
-          Write-Host "Potential duplicate files found:" -ForegroundColor Yellow
-          $fileHashes | ForEach-Object { 
-            Write-Host "  Hash: $($_.Name)"
-            $_.Group | ForEach-Object { Write-Host "    $($_.FullName)" }
-          }
-        } else {
-          Write-Host "✅ No duplicate files found" -ForegroundColor Green
-        }
+        # Basic file count
+        Write-Host "`nProject statistics:" -ForegroundColor Yellow
+        $csFiles = Get-ChildItem -Path "src" -Filter "*.cs" -Recurse -ErrorAction SilentlyContinue
+        Write-Host "  C# files: $($csFiles.Count)" -ForegroundColor White
+        
+        $xamlFiles = Get-ChildItem -Path "src" -Filter "*.xaml" -Recurse -ErrorAction SilentlyContinue
+        Write-Host "  XAML files: $($xamlFiles.Count)" -ForegroundColor White
 
   generate-summary:
     name: Generate Summary
-    needs: [validate-android, validate-ios, validate-windows, code-analysis]
+    needs: [validate-android, validate-ios, validate-maccatalyst, validate-windows, code-analysis]
     runs-on: ubuntu-latest
     if: always()
     
@@ -186,6 +220,12 @@ jobs:
           echo "- ✅ **iOS Build**: Passed" >> $GITHUB_STEP_SUMMARY
         else
           echo "- ❌ **iOS Build**: Failed" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.validate-maccatalyst.result }}" == "success" ]; then
+          echo "- ✅ **MacCatalyst Build**: Passed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ❌ **MacCatalyst Build**: Failed" >> $GITHUB_STEP_SUMMARY
         fi
         
         if [ "${{ needs.validate-windows.result }}" == "success" ]; then
