@@ -1,4 +1,4 @@
-Get-Date -Format "yyyy-MM-dd HH:mm:ss";
+Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
 # Get the directory where this script is located, then get its parent directory
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -48,4 +48,11 @@ Write-Host "Output file: $outFile"
 } | Out-File -FilePath $outFile -Encoding utf8
 
 Write-Host "Script output has been saved to $outFile"
-Get-Date -Format "yyyy-MM-dd HH:mm:ss";
+Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+git add .
+Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+git commit --message "add all files"
+Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+git push origin --all
+Get-Date -Format "yyyy-MM-dd HH:mm:ss"

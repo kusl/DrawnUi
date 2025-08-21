@@ -3,7 +3,7 @@ Path
 ----
 C:\code\DrawnUi
 On branch main
-Your branch is ahead of 'upstream/main' by 1 commit.
+Your branch is ahead of 'upstream/main' by 3 commits.
   (use "git push" to publish your local commits)
 
 Changes not staged for commit:
@@ -34,6 +34,11 @@ C:.
 ª   DeleteBinObj.ps1
 ª   README.md
 ª   
++---.github
+ª   +---workflows
+ª           build-release.yml
+ª           pr-validation.yml
+ª           
 +---art
 ª   ª   icon.png
 ª   ª   
@@ -62,6 +67,10 @@ C:.
 ª           Screen4.jpg
 ª           Simulator_Screenshot_iPad_Pro_13_inch_M4.png
 ª           
++---documentation
+ª       claude.md
+ª       github-actions.md
+ª       
 +---scripts
 ª       cat.ps1
 ª       llm-input.txt
