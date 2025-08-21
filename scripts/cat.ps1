@@ -19,7 +19,7 @@ Write-Host "Output file: $outFile"
     # --- Commands ---
     # The output of each command is sent to the pipeline automatically
     git status
-    git remote show origin
+    git remote show upstream
     # git clean -dfx
     tree /F
     # --- File Content Sections ---

@@ -3,14 +3,17 @@ Path
 ----
 C:\code\DrawnUi
 On branch main
-Your branch is up to date with 'origin/main'.
+Your branch is ahead of 'upstream/main' by 1 commit.
+  (use "git push" to publish your local commits)
 
-Untracked files:
-  (use "git add <file>..." to include in what will be committed)
-	scripts/
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   scripts/cat.ps1
+	modified:   scripts/llm-input.txt
 
-nothing added to commit but untracked files present (use "git add" to track)
-* remote origin
+no changes added to commit (use "git add" and/or "git commit -a")
+* remote upstream
   Fetch URL: https://github.com/taublast/DrawnUi.Breakout.git
   Push  URL: https://github.com/taublast/DrawnUi.Breakout.git
   HEAD branch: main
@@ -22,7 +25,7 @@ nothing added to commit but untracked files present (use "git add" to track)
   Local branch configured for 'git pull':
     main merges with remote main
   Local ref configured for 'git push':
-    main pushes to main (up to date)
+    main pushes to main (fast-forwardable)
 Folder PATH listing
 Volume serial number is BE05-6605
 C:.
@@ -62,8 +65,6 @@ C:.
 +---scripts
 ª       cat.ps1
 ª       llm-input.txt
-ª       PowerShell.txt
-ª       source-code.txt
 ª       
 +---src
     ª   App.xaml
