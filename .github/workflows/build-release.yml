@@ -1,34 +1,208 @@
-name: Build and Test (Windows)
+# ==============================================================================
+# FILE: .github/workflows/build-release.yml
+# ==============================================================================
+name: Build and Release
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
     branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH: 'src/Breakout.csproj'
 
 jobs:
-  build-and-test-windows:
+  build-android:
+    name: Build Android
     runs-on: windows-latest
     
     steps:
-    - uses: actions/checkout@v4
-    
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'microsoft'
+        java-version: '17'
+        
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '9.0.x'
-    
-    # Install MAUI workloads on Windows
-    - name: Install MAUI Workloads
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install MAUI workloads
       run: |
-        dotnet workload install maui --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet9/nuget/v3/index.json --source https://api.nuget.org/v3/index.json
-        dotnet workload install android --source https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet9/nuget/v3/index.json --source https://api.nuget.org/v3/index.json
-    
+        dotnet nuget locals all --clear
+        dotnet workload install maui android
+        
     - name: Restore dependencies
-      run: dotnet restore src/Breakout.csproj
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+      
+    - name: Build Android APK (Debug)
+      run: |
+        dotnet build ${{ env.PROJECT_PATH }} `
+          -c Debug `
+          -f net9.0-android `
+          --no-restore
+          
+    - name: Build Android APK (Release)
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} `
+          -c Release `
+          -f net9.0-android `
+          --no-restore `
+          -o ./artifacts/android
+          
+    - name: Upload Android artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk
+        path: ./artifacts/android/**/*.apk
+
+  build-ios:
+    name: Build iOS
+    runs-on: macos-latest
     
-    - name: Build
-      run: dotnet build src/Breakout.csproj --no-restore --configuration Release
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install MAUI workloads
+      run: |
+        dotnet nuget locals all --clear
+        dotnet workload install maui ios
+        
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+      
+    - name: Build iOS (Debug)
+      run: |
+        dotnet build ${{ env.PROJECT_PATH }} \
+          -c Debug \
+          -f net9.0-ios \
+          --no-restore
+          
+    - name: Build iOS (Release)
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} \
+          -c Release \
+          -f net9.0-ios \
+          --no-restore \
+          -o ./artifacts/ios
+          
+    - name: Upload iOS artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-app
+        path: ./artifacts/ios/**/*.app
+
+  build-maccatalyst:
+    name: Build MacCatalyst
+    runs-on: macos-latest
     
-    - name: Test
-      run: dotnet test src/Breakout.csproj --no-build --configuration Release --verbosity normal
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install MAUI workloads
+      run: |
+        dotnet nuget locals all --clear
+        dotnet workload install maui maccatalyst
+        
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+      
+    - name: Build MacCatalyst (Debug)
+      run: |
+        dotnet build ${{ env.PROJECT_PATH }} \
+          -c Debug \
+          -f net9.0-maccatalyst \
+          --no-restore
+          
+    - name: Build MacCatalyst (Release)
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} \
+          -c Release \
+          -f net9.0-maccatalyst \
+          --no-restore \
+          -o ./artifacts/maccatalyst
+          
+    - name: Upload MacCatalyst artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: maccatalyst-app
+        path: ./artifacts/maccatalyst/**/*.app
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install MAUI workloads
+      run: |
+        dotnet nuget locals all --clear
+        dotnet workload install maui windows
+        
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+      
+    - name: Build Windows (Debug)
+      run: |
+        dotnet build ${{ env.PROJECT_PATH }} `
+          -c Debug `
+          -f net9.0-windows10.0.19041.0 `
+          --no-restore
+          
+    - name: Build Windows (Release)
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} `
+          -c Release `
+          -f net9.0-windows10.0.19041.0 `
+          --no-restore `
+          -o ./artifacts/windows
+          
+    - name: Upload Windows artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-app
+        path: ./artifacts/windows/**/*.exe
+
+  create-release:
+    name: Create Release
+    needs: [build-android, build-ios, build-maccatalyst, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./release-artifacts
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ./release-artifacts/**/*
+        draft: true
+        generate_release_notes: true

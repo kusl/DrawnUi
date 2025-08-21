@@ -1,0 +1,84 @@
+# ==============================================================================
+# OPTIONAL: FILE: .github/workflows/nightly-build.yml
+# ==============================================================================
+---
+name: Nightly Build
+
+on:
+  schedule:
+    # Run every day at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH: 'src/Breakout.csproj'
+
+jobs:
+  nightly-test:
+    name: Nightly Full Test
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            framework: net9.0-android
+            workload: "maui android"
+          - os: macos-latest
+            framework: net9.0-ios
+            workload: "maui ios"
+          - os: macos-latest
+            framework: net9.0-maccatalyst
+            workload: "maui maccatalyst"
+          - os: windows-latest
+            framework: net9.0-windows10.0.19041.0
+            workload: "maui windows"
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Java (Android only)
+      if: contains(matrix.framework, 'android')
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'microsoft'
+        java-version: '17'
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install MAUI workloads
+      shell: pwsh
+      run: |
+        dotnet nuget locals all --clear
+        dotnet workload install ${{ matrix.workload }}
+        
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.PROJECT_PATH }}
+      
+    - name: Build and Test
+      shell: pwsh
+      run: |
+        # Build
+        dotnet build ${{ env.PROJECT_PATH }} `
+          -c Release `
+          -f ${{ matrix.framework }} `
+          --no-restore `
+          --verbosity normal
+        
+        # If this was a test project, we'd run tests here
+        # dotnet test ${{ env.PROJECT_PATH }} --no-build --configuration Release
+        
+    - name: Archive build logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs-${{ matrix.framework }}-${{ github.run_number }}
+        path: |
+          **/*.binlog
+          **/*.log
+        retention-days: 7
