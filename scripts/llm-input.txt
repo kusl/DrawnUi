@@ -3,13 +3,12 @@ Path
 ----
 C:\code\DrawnUi
 On branch main
-Your branch is ahead of 'upstream/main' by 21 commits.
+Your branch is ahead of 'upstream/main' by 23 commits.
   (use "git push" to publish your local commits)
 
 Changes not staged for commit:
   (use "git add <file>..." to update what will be committed)
   (use "git restore <file>..." to discard changes in working directory)
-	modified:   documentation/claude.md
 	modified:   scripts/llm-input.txt
 
 no changes added to commit (use "git add" and/or "git commit -a")
@@ -33,7 +32,7 @@ no changes added to commit (use "git add" and/or "git commit -a")
   Remote branch:
     main tracked
   Local ref configured for 'git push':
-    main pushes to main (up to date)
+    main pushes to main (fast-forwardable)
 Folder PATH listing
 Volume serial number is BE05-6605
 C:.
@@ -493,6 +492,9 @@ jobs:
           -f net9.0-windows10.0.19041.0 `
           --no-restore
           
+    - name: Restore dependencies for publish (with runtime)
+      run: dotnet restore ${{ env.PROJECT_PATH }} -r win-x64
+          
     - name: Build Windows (Release)
       run: |
         dotnet publish ${{ env.PROJECT_PATH }} `
@@ -570,7 +572,6 @@ jobs:
         
         Write-Host "`n=== .NET Info ===" -ForegroundColor Cyan
         dotnet --info
-
 # ==============================================================================
 # FILE: .github/workflows/ios-when-ready.yml (Future use)
 # ==============================================================================
