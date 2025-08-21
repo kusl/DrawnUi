@@ -1,0 +1,180 @@
+name: Android APK Build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '9.0.x'
+  PROJECT_PATH: 'src/Breakout.csproj'
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'microsoft'
+        java-version: '17'
+        
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        include-prerelease: false
+        
+    - name: Clear NuGet caches
+      run: |
+        dotnet nuget locals all --clear
+        
+    - name: Install MAUI workload
+      run: |
+        dotnet workload update
+        dotnet workload install maui
+        
+    - name: Display .NET info
+      run: |
+        dotnet --info
+        dotnet workload list
+        
+    - name: Restore project (Android only)
+      run: |
+        dotnet restore ${{ env.PROJECT_PATH }} --framework net9.0-android --verbosity normal
+      
+    - name: Build Android Release APK
+      run: |
+        dotnet publish ${{ env.PROJECT_PATH }} `
+          --configuration Release `
+          --framework net9.0-android `
+          --no-restore `
+          --output ./build-output `
+          --verbosity normal `
+          /p:AndroidPackageFormat=apk `
+          /p:AndroidUseAapt2=true
+          
+    - name: Find APK files
+      id: find_apk
+      run: |
+        Write-Host "Searching for APK files..."
+        $apkFiles = Get-ChildItem -Path "build-output" -Recurse -Include "*.apk" | Where-Object { $_.Name -like "*Signed.apk" -or ($_.Directory.Name -eq "publish" -and $_.Name -like "*.apk") }
+        
+        if ($apkFiles.Count -eq 0) {
+          # Fallback: find any APK
+          $apkFiles = Get-ChildItem -Path "build-output" -Recurse -Include "*.apk"
+        }
+        
+        if ($apkFiles.Count -gt 0) {
+          $apkFile = $apkFiles[0]
+          $apkSize = ($apkFile.Length/1MB).ToString('F2')
+          Write-Host "✅ Found APK: $($apkFile.Name) ($apkSize MB)" -ForegroundColor Green
+          Write-Host "📂 Path: $($apkFile.FullName)" -ForegroundColor Cyan
+          
+          # Set outputs
+          echo "apk_found=true" >> $env:GITHUB_OUTPUT
+          echo "apk_path=$($apkFile.FullName)" >> $env:GITHUB_OUTPUT
+          echo "apk_name=$($apkFile.Name)" >> $env:GITHUB_OUTPUT
+          echo "apk_size=$apkSize" >> $env:GITHUB_OUTPUT
+        } else {
+          Write-Host "❌ No APK files found!" -ForegroundColor Red
+          Write-Host "Build output structure:" -ForegroundColor Yellow
+          Get-ChildItem -Path "build-output" -Recurse | ForEach-Object {
+            Write-Host "  $($_.FullName)" -ForegroundColor Gray
+          }
+          echo "apk_found=false" >> $env:GITHUB_OUTPUT
+          exit 1
+        }
+        
+    - name: Upload APK artifact
+      if: steps.find_apk.outputs.apk_found == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: breakout-apk-${{ github.run_number }}
+        path: ${{ steps.find_apk.outputs.apk_path }}
+        retention-days: 90
+        
+    - name: Create release version
+      id: version
+      run: |
+        $timestamp = Get-Date -Format "yyyy.MM.dd-HHmm"
+        $shortSha = "${{ github.sha }}".Substring(0,7)
+        $version = "v$timestamp-$shortSha"
+        echo "tag=$version" >> $env:GITHUB_OUTPUT
+        Write-Host "Release version: $version" -ForegroundColor Green
+        
+    - name: Create GitHub Release
+      if: steps.find_apk.outputs.apk_found == 'true'
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.version.outputs.tag }}
+        name: Breakout Android ${{ steps.version.outputs.tag }}
+        body: |
+          # 🎮 Breakout Game - Android Release
+          
+          **🚀 Stable Release Build**
+          
+          ## 📱 Installation Instructions
+          1. **Download** the APK file below
+          2. **Enable** "Install from unknown sources" in your Android settings:
+             - Go to Settings → Security → Unknown Sources (enable)
+             - Or: Settings → Apps → Special Access → Install Unknown Apps
+          3. **Install** by tapping the downloaded APK file
+          
+          ## 📊 Build Information
+          - **APK Size**: ${{ steps.find_apk.outputs.apk_size }} MB
+          - **Built**: $(Get-Date -Format "yyyy-MM-dd HH:mm") UTC
+          - **Commit**: `${{ github.sha }}`
+          - **Framework**: .NET 9 + MAUI
+          
+          ## 🎯 Game Features
+          - 🏓 Classic Breakout/Arkanoid gameplay
+          - 🔥 Multiple levels with increasing difficulty
+          - ⚡ Power-ups and special effects
+          - 🎮 Touch controls optimized for mobile
+          - 🎵 Retro-style graphics and sound effects
+          - 🤖 AI demo mode
+          - 🌍 Multi-language support
+          
+          ## 🆕 Latest Changes
+          - Latest build from main branch
+          - Bug fixes and performance improvements
+          - Enhanced gameplay experience
+          
+          ---
+          
+          **Note**: This APK is unsigned for development/testing purposes. For production use, proper signing would be implemented.
+          
+        files: ${{ steps.find_apk.outputs.apk_path }}
+        draft: false
+        prerelease: false
+        make_latest: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Build Summary
+      if: always()
+      run: |
+        Write-Host ""
+        Write-Host "===========================================" -ForegroundColor Cyan
+        Write-Host "           BUILD SUMMARY" -ForegroundColor Cyan  
+        Write-Host "===========================================" -ForegroundColor Cyan
+        
+        if ("${{ steps.find_apk.outputs.apk_found }}" -eq "true") {
+          Write-Host "✅ Status: SUCCESS" -ForegroundColor Green
+          Write-Host "📱 APK: ${{ steps.find_apk.outputs.apk_name }}" -ForegroundColor White
+          Write-Host "📏 Size: ${{ steps.find_apk.outputs.apk_size }} MB" -ForegroundColor White
+          Write-Host "🏷️  Release: ${{ steps.version.outputs.tag }}" -ForegroundColor White
+          Write-Host "📦 Artifact: breakout-apk-${{ github.run_number }}" -ForegroundColor White
+          Write-Host "🔗 Release: Available in GitHub Releases" -ForegroundColor White
+        } else {
+          Write-Host "❌ Status: FAILED" -ForegroundColor Red
+          Write-Host "📱 APK: Not found" -ForegroundColor Red
+        }
+        
+        Write-Host "===========================================" -ForegroundColor Cyan
